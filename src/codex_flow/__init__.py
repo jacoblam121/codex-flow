@@ -25,6 +25,14 @@ from .errors import (
     exit_code_for,
 )
 from .paths import FlowPaths, resolve_paths
+from .preflight import PREFLIGHT_SCHEMA_VERSION, PreflightResult, run_preflight
+from .rollouts import (
+    JsonlReader,
+    RolloutAnalysis,
+    analyze_rollout,
+    discover_rollout,
+    validate_thread_id,
+)
 
 __all__ = [
     "ApplicationError",
@@ -47,4 +55,12 @@ __all__ = [
     "manifest_from_json",
     "resolve_paths",
     "validate_run_id",
+    "JsonlReader",
+    "PREFLIGHT_SCHEMA_VERSION",
+    "PreflightResult",
+    "RolloutAnalysis",
+    "analyze_rollout",
+    "discover_rollout",
+    "run_preflight",
+    "validate_thread_id",
 ]

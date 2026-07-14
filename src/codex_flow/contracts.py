@@ -124,6 +124,7 @@ class RepositoryBaseline:
     dirty: bool | None = None
     is_git_repository: bool = False
     original_working_directory: str | None = None
+    baseline_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "working_directory", _absolute_path(self.working_directory))
@@ -135,6 +136,11 @@ class RepositoryBaseline:
             raise ValueError("is_git_repository must be a boolean")
         if self.dirty is not None and not isinstance(self.dirty, bool):
             raise ValueError("dirty must be a boolean or null")
+        if self.baseline_fingerprint is not None:
+            if not isinstance(self.baseline_fingerprint, str) or not re.fullmatch(
+                r"[0-9a-f]{64}", self.baseline_fingerprint
+            ):
+                raise ValueError("baseline_fingerprint must be a lowercase SHA-256 hex digest")
 
 
 @dataclass(frozen=True)

@@ -1,1 +1,1 @@
-{"type":"session_meta","timestamp":"2026-07-12T10:12:00.000Z","payload":{"id":"019f55d8-c19c-7561-a797-28592fcb7194","session_id":"019f55d8-c19c-7561-a797-28592fcb7194","cli_version":"0.144.1","cwd":"/sanitized/worktree","source":"cli","thread_source":"subagent"}}
+{"type":"session_meta","timestamp":"2026-07-12T10:12:00.000Z","payload":{"id":"019f55d8-c19c-7561-a797-28592fcb7194","session_id":"019f55cc-b6fb-79d2-b1d2-27ee49aaf2ac","cli_version":"0.144.1","cwd":"/sanitized/worktree","source":"cli","thread_source":"subagent"}}

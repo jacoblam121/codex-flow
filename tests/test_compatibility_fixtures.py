@@ -52,3 +52,4 @@ def test_sanitized_subagent_fixture_is_distinguishable_for_later_rejection():
         (FIXTURES / "sanitized_subagent_rollout.jsonl").read_text().strip()
     )
     assert record["payload"]["thread_source"] == "subagent"
+    assert record["payload"]["id"] != record["payload"]["session_id"]
