@@ -1,0 +1,5 @@
+{"type":"session_meta","timestamp":"2026-07-12T10:08:27.391Z","payload":{"id":"019f55cc-b6fb-79d2-b1d2-27ee49aaf2ac","session_id":"019f55cc-b6fb-79d2-b1d2-27ee49aaf2ac","cli_version":"0.144.1","cwd":"/sanitized/worktree","source":"cli","thread_source":"user"}}
+{"type":"turn_context","timestamp":"2026-07-12T10:10:57.546Z","payload":{"turn_id":"019f55cf-0135-7513-989e-64a953d43b14","collaboration_mode":{"mode":"plan","settings":{}}}}
+{"type":"event_msg","timestamp":"2026-07-12T11:30:00.000Z","payload":{"type":"item_completed","item":{"type":"Plan","id":"plan-sanitized-1","text":"[sanitized plan]\n\n- Preserve the contract boundary.\n- Record only immutable launch facts."}}}
+{"type":"response_item","timestamp":"2026-07-12T11:30:00.001Z","payload":{"type":"message","role":"assistant","phase":"final_answer","content":[{"type":"output_text","text":"<proposed_plan>\n[sanitized plan]\n\n- Preserve the contract boundary.\n- Record only immutable launch facts.\n</proposed_plan>"}]}}
+{"type":"turn_context","timestamp":"2026-07-12T11:37:35.905Z","payload":{"turn_id":"019f561e-531c-7160-8901-650e99b6ae80","collaboration_mode":{"mode":"default","settings":{}}}}
