@@ -25,3 +25,12 @@ def test_atomic_json_write_cleans_up_when_replace_fails(tmp_path, monkeypatch):
         atomic.atomic_write_json(target, {"answer": 42})
     assert not target.exists()
     assert list(tmp_path.glob(".state.json.*.tmp")) == []
+
+
+def test_atomic_text_write_can_publish_without_overwriting(tmp_path):
+    target = tmp_path / "immutable.txt"
+    atomic.atomic_write_text(target, "first", overwrite=False)
+    with pytest.raises(FileExistsError):
+        atomic.atomic_write_text(target, "second", overwrite=False)
+    assert target.read_text(encoding="utf-8") == "first"
+    assert list(tmp_path.glob(".immutable.txt.*.tmp")) == []

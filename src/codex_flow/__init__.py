@@ -13,6 +13,7 @@ from .contracts import (
     manifest_from_dict,
     manifest_from_json,
     validate_run_id,
+    validate_sha256,
 )
 from .errors import (
     ApplicationError,
@@ -26,6 +27,25 @@ from .errors import (
 )
 from .paths import FlowPaths, resolve_paths
 from .preflight import PREFLIGHT_SCHEMA_VERSION, PreflightResult, run_preflight
+from .launcher import (
+    CONTEXT_MODES,
+    LaunchArtifacts,
+    LaunchResult,
+    WindowsBoundary,
+    build_child_argv,
+    build_codex_argv,
+    build_fork_prompt,
+    build_manifest,
+    build_windows_argv,
+    development_child_executable,
+    generate_handoff,
+    launch,
+    load_run_manifest,
+    persist_run_artifacts,
+    resolve_windows_boundary,
+    run_child,
+    run_marker,
+)
 from .rollouts import (
     JsonlReader,
     RolloutAnalysis,
@@ -55,6 +75,24 @@ __all__ = [
     "manifest_from_json",
     "resolve_paths",
     "validate_run_id",
+    "validate_sha256",
+    "CONTEXT_MODES",
+    "LaunchArtifacts",
+    "LaunchResult",
+    "WindowsBoundary",
+    "build_child_argv",
+    "build_codex_argv",
+    "build_fork_prompt",
+    "build_manifest",
+    "build_windows_argv",
+    "development_child_executable",
+    "generate_handoff",
+    "launch",
+    "load_run_manifest",
+    "persist_run_artifacts",
+    "resolve_windows_boundary",
+    "run_child",
+    "run_marker",
     "JsonlReader",
     "PREFLIGHT_SCHEMA_VERSION",
     "PreflightResult",

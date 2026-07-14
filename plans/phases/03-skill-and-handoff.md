@@ -36,7 +36,10 @@ core model/context selection and confirmation experience, not subagent routing.
 ## Contracts
 
 - Implicit skill activation may explain the workflow, but only an explicit user handoff/launch request may open a new terminal.
-- Plan-only remains the default; Sol fork is opt-in.
+- Plan-only remains the default and starts a clean new execution session with no inherited source transcript; the approved plan and handoff are
+  its explicit context.
+- Sol fork is opt-in and creates a distinct execution thread containing the full visible source history; the confirmation must make that
+  inherited context and its associated context cost explicit.
 - One combined user confirmation covers plan hash, context mode, execution model/effort, repository baseline, and dirty-state fingerprint.
 - Native mode detection comes from the exact rollout characterized in Phases 00-01, not from parsing the user's words.
 - Model recommendations are advisory until confirmed; no model or effort changes silently.

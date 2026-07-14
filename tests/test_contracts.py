@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
+import hashlib
 
 import pytest
 
@@ -38,8 +40,10 @@ def make_manifest() -> RunManifest:
             original_working_directory=".",
         ),
         handoff=HandoffSelection(
-            context_mode="plan-only", model="gpt-5.6-luna", reasoning_effort="medium"
+            context_mode="plan", model="gpt-5.6-luna", reasoning_effort="medium"
         ),
+        codex_executable=str(Path("/bin/sh").resolve()),
+        plan_sha256=hashlib.sha256(b"plan").hexdigest(),
         artifacts=ArtifactPaths(
             manifest="./manifest.json",
             plan="./plan.md",
@@ -65,6 +69,7 @@ def test_manifest_round_trip_preserves_all_fields():
     decoded = manifest_from_dict(json.loads(manifest.to_json()))
     assert decoded == manifest
     assert decoded.to_dict() == manifest.to_dict()
+    assert decoded.codex_executable == str(Path("/bin/sh").resolve())
     assert decoded.created_at.endswith("Z")
     assert decoded.artifacts.manifest.startswith("/")
     assert set(decoded.to_dict()) == {
@@ -73,6 +78,8 @@ def test_manifest_round_trip_preserves_all_fields():
         "source_thread",
         "repository",
         "handoff",
+        "codex_executable",
+        "plan_sha256",
         "artifacts",
         "created_at",
     }
@@ -91,6 +98,36 @@ def test_future_schema_is_rejected():
     document = make_manifest().to_dict()
     document["schema_version"] = 2
     with pytest.raises(FutureSchemaError, match="future schema"):
+        manifest_from_dict(document)
+
+
+@pytest.mark.parametrize("value", [None, "", "A" * 64, "g" * 64, "0" * 63])
+def test_required_plan_sha256_is_lowercase_and_schema_v1(value):
+    document = make_manifest().to_dict()
+    if value is None:
+        del document["plan_sha256"]
+    else:
+        document["plan_sha256"] = value
+    with pytest.raises(ValueError, match="plan_sha256"):
+        manifest_from_dict(document)
+
+
+@pytest.mark.parametrize("value", [None, "", "codex", "/tmp/../bin/sh"])
+def test_required_codex_executable_is_canonical_absolute_path(value):
+    document = make_manifest().to_dict()
+    if value is None:
+        del document["codex_executable"]
+    else:
+        document["codex_executable"] = value
+    with pytest.raises(ValueError, match="codex_executable"):
+        manifest_from_dict(document)
+
+
+@pytest.mark.parametrize("context", ["plan-only", "default", "", "PLAN"])
+def test_persisted_handoff_context_is_canonical(context):
+    document = make_manifest().to_dict()
+    document["handoff"]["context_mode"] = context
+    with pytest.raises(ValueError, match="context_mode"):
         manifest_from_dict(document)
 
 

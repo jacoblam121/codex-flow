@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -22,13 +23,14 @@ def test_unknown_command_is_invalid_usage(capsys):
 
 
 def test_registered_command_is_clear_and_side_effect_free(capsys):
-    assert main(["launch"]) == 4
-    assert "registered but not implemented" in capsys.readouterr().err
+    assert main(["launch"]) == 2
+    assert "required" in capsys.readouterr().err
 
 
 def test_all_deferred_commands_remain_exit_four(capsys):
-    for command in ("doctor", "show", "install", "uninstall", "child"):
+    for command in ("doctor", "show", "install", "uninstall"):
         assert main([command]) == 4
+    assert main(["child"]) == 2
     assert "registered but not implemented" in capsys.readouterr().err
 
 
@@ -77,3 +79,78 @@ def test_external_preflight_failure_uses_exit_code_five(monkeypatch, capsys):
 def test_parser_uses_stable_command_set():
     parser = build_parser()
     assert set(parser._subparsers._group_actions[0].choices) == set(COMMANDS)
+
+
+def test_launch_dry_run_requires_json_and_context_is_canonical(capsys):
+    common = [
+        "launch",
+        "--thread",
+        "019f55cc-b6fb-79d2-b1d2-27ee49aaf2ac",
+        "--cwd",
+        ".",
+        "--model",
+        "gpt-test",
+        "--effort",
+        "max",
+        "--baseline-fingerprint",
+        "a" * 64,
+        "--plan-sha256",
+        "b" * 64,
+    ]
+    assert main([*common, "--dry-run"]) == 2
+    assert "requires --json" in capsys.readouterr().err
+    assert main([*common, "--context", "plan-only"]) == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_cli_forwards_launch_and_child_arguments(monkeypatch, capsys):
+    launch_calls = []
+    child_calls = []
+
+    def fake_launch(**kwargs):
+        launch_calls.append(kwargs)
+        return SimpleNamespace(to_json=lambda: '{"status":"dry-run"}\n')
+
+    def fake_child(run_id, **kwargs):
+        child_calls.append((run_id, kwargs))
+        return 0
+
+    monkeypatch.setattr("codex_flow.cli.launch", fake_launch)
+    monkeypatch.setattr("codex_flow.cli.run_child", fake_child)
+    plan_hash = "b" * 64
+    baseline = "a" * 64
+    assert main(
+        [
+            "launch",
+            "--thread",
+            "019f55cc-b6fb-79d2-b1d2-27ee49aaf2ac",
+            "--cwd",
+            "/work tree",
+            "--model",
+            "gpt-test",
+            "--effort",
+            "max",
+            "--baseline-fingerprint",
+            baseline,
+            "--plan-sha256",
+            plan_hash,
+            "--context",
+            "fork",
+            "--confirm-dirty",
+            baseline,
+            "--json",
+            "--dry-run",
+        ]
+    ) == 0
+    assert capsys.readouterr().out == '{"status":"dry-run"}\n'
+    assert launch_calls[0]["thread_id"] == "019f55cc-b6fb-79d2-b1d2-27ee49aaf2ac"
+    assert launch_calls[0]["cwd"] == "/work tree"
+    assert launch_calls[0]["context_mode"] == "fork"
+    assert launch_calls[0]["baseline_fingerprint"] == baseline
+    assert launch_calls[0]["plan_sha256"] == plan_hash
+    assert launch_calls[0]["dry_run"] is True
+
+    run_id = "550e8400-e29b-41d4-a716-446655440000"
+    assert main(["child", run_id]) == 0
+    assert child_calls[0][0] == run_id
+    assert child_calls[0][1]["environ"] is os.environ

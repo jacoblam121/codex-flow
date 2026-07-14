@@ -46,6 +46,8 @@ gives Sol the live evidence required to audit the implementation independently.
 - Selection is exact by run ID when supplied and conservative when inferred.
 - `reported` means a valid report envelope was recovered; `reviewable` depends on an associated rollout and live repository evidence and does not
   require an envelope.
+- Fork JSONL contains copied source history and duplicate session metadata. Association must use the current execution metadata, the exact run
+  marker, and only records belonging to or after that run segment; inherited records before the segment are never treated as execution evidence.
 
 ## Tests
 
@@ -57,6 +59,8 @@ gives Sol the live evidence required to audit the implementation independently.
 - Report claims that disagree with the actual diff or test result.
 - Missing report with and without repository changes.
 - Missing/malformed audit envelope after an otherwise complete Sol review.
+- A fork JSONL fixture with inherited old run markers, reports, tool calls, and source session metadata before the current execution segment;
+  association must select only the current run marker and current execution records.
 
 ## Exit Criteria
 

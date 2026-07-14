@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 from . import __version__
 from .errors import ApplicationError, InvalidCLIUsage, UnsupportedCapability
+from .launcher import launch, run_child
 from .preflight import run_preflight
 
 COMMANDS = (
@@ -56,6 +57,21 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument("--model")
             command_parser.add_argument("--effort")
             command_parser.add_argument("--json", action="store_true")
+        elif command == "launch":
+            command_parser.add_argument("--thread", required=True)
+            command_parser.add_argument("--cwd", required=True)
+            command_parser.add_argument("--model", required=True)
+            command_parser.add_argument("--effort", required=True)
+            command_parser.add_argument("--baseline-fingerprint", required=True)
+            command_parser.add_argument("--plan-sha256", required=True)
+            command_parser.add_argument(
+                "--context", choices=("plan", "fork"), default="plan"
+            )
+            command_parser.add_argument("--confirm-dirty")
+            command_parser.add_argument("--json", action="store_true")
+            command_parser.add_argument("--dry-run", action="store_true")
+        elif command == "child":
+            command_parser.add_argument("run_id")
     return parser
 
 
@@ -94,8 +110,36 @@ def _dispatch(args: argparse.Namespace) -> int:
             for blocker in result.blockers:
                 print(f"blocked: {blocker}", file=sys.stderr)
         return result.exit_code
+    if command == "launch":
+        if args.dry_run and not args.json:
+            raise InvalidCLIUsage("--dry-run requires --json")
+        result = launch(
+            thread_id=args.thread,
+            cwd=args.cwd,
+            model=args.model,
+            effort=args.effort,
+            baseline_fingerprint=args.baseline_fingerprint,
+            plan_sha256=args.plan_sha256,
+            context_mode=args.context,
+            confirm_dirty=args.confirm_dirty,
+            dry_run=args.dry_run,
+            environ=os.environ,
+        )
+        if args.json:
+            sys.stdout.write(result.to_json())
+        else:
+            print(f"run ID: {result.run_id}")
+            print(f"context: {result.context_mode}")
+            print(f"manifest: {result.paths.manifest}")
+            print(f"plan: {result.paths.plan}")
+            print(f"handoff: {result.paths.handoff}")
+            for warning in result.warnings:
+                print(f"warning: {warning}", file=sys.stderr)
+        return 0
+    if command == "child":
+        return run_child(args.run_id, environ=os.environ)
     raise UnsupportedCapability(
-        f"command '{command}' is registered but not implemented in Phase 00"
+        f"command '{command}' is registered but not implemented in this phase"
     )
 
 

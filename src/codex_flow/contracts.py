@@ -25,6 +25,7 @@ _THREAD_ID_PATTERN = re.compile(
 _TIMESTAMP_PATTERN = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$"
 )
+_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
 def validate_run_id(run_id: str) -> str:
@@ -78,6 +79,14 @@ def _absolute_path(value: str | Path) -> str:
 def _nonempty(value: str, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def validate_sha256(value: str, field_name: str = "sha256") -> str:
+    """Validate a required lowercase SHA-256 hexadecimal digest."""
+
+    if not isinstance(value, str) or _SHA256_PATTERN.fullmatch(value) is None:
+        raise ValueError(f"{field_name} must be a lowercase SHA-256 hex digest")
     return value
 
 
@@ -152,7 +161,8 @@ class HandoffSelection:
     reasoning_effort: str
 
     def __post_init__(self) -> None:
-        _nonempty(self.context_mode, "context_mode")
+        if self.context_mode not in {"plan", "fork"}:
+            raise ValueError("context_mode must be plan or fork")
         _nonempty(self.model, "model")
         _nonempty(self.reasoning_effort, "reasoning_effort")
 
@@ -181,6 +191,9 @@ class ArtifactPaths:
             if value is not None:
                 object.__setattr__(self, field_name, _absolute_path(value))
 
+    def to_dict(self) -> dict[str, str | None]:
+        return asdict(self)
+
 
 @dataclass(frozen=True)
 class RunManifest:
@@ -191,6 +204,8 @@ class RunManifest:
     source_thread: ThreadReference
     repository: RepositoryBaseline
     handoff: HandoffSelection
+    codex_executable: str
+    plan_sha256: str
     artifacts: ArtifactPaths
     created_at: str
 
@@ -200,6 +215,13 @@ class RunManifest:
         if self.schema_version != SCHEMA_VERSION:
             raise FutureSchemaError(f"unsupported schema version: {self.schema_version}")
         _validate_timestamp(self.created_at)
+        if not isinstance(self.codex_executable, str) or not self.codex_executable:
+            raise ValueError("codex_executable must be a non-empty absolute path")
+        codex_path = Path(self.codex_executable).expanduser()
+        canonical_codex_path = str(codex_path.resolve(strict=False))
+        if not codex_path.is_absolute() or self.codex_executable != canonical_codex_path:
+            raise ValueError("codex_executable must be a canonical absolute path")
+        validate_sha256(self.plan_sha256, "plan_sha256")
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -241,6 +263,8 @@ def manifest_from_dict(document: Mapping[str, Any]) -> RunManifest:
         "source_thread",
         "repository",
         "handoff",
+        "codex_executable",
+        "plan_sha256",
         "artifacts",
         "created_at",
     }
@@ -254,6 +278,8 @@ def manifest_from_dict(document: Mapping[str, Any]) -> RunManifest:
         source_thread=ThreadReference(**dict(_object(document, "source_thread"))),
         repository=RepositoryBaseline(**dict(_object(document, "repository"))),
         handoff=HandoffSelection(**dict(_object(document, "handoff"))),
+        codex_executable=document.get("codex_executable"),
+        plan_sha256=document.get("plan_sha256"),
         artifacts=ArtifactPaths(**dict(_object(document, "artifacts"))),
         created_at=document.get("created_at"),
     )
