@@ -1,9 +1,9 @@
-# Phase 04: Reporting and Review
+# Phase 04: Reporting and Conversational Review
 
 ## Outcome
 
 When the execution agent finishes or blocks, `$codex-flow review` associates the exact execution rollout, recovers its structured report when available, and
-gives Sol the live evidence required to audit the implementation independently.
+gives Sol the live evidence required for a conversational review of the implementation.
 
 ## Prerequisites
 
@@ -27,25 +27,30 @@ gives Sol the live evidence required to audit the implementation independently.
   - `codex-flow show --source-thread <id> --cwd <path> --json` for conservative run selection/listing.
 - Derive run state from manifests and rollouts rather than requiring the execution agent to write bookkeeping files.
 - Implement `$codex-flow review` behavior:
-  - Choose the latest unreviewed run for the current source thread and repository.
-  - Show a picker if more than one run is plausible.
-  - Retrieve the structured report or labeled unstructured result, plan, baseline, and live Git state.
-  - Inspect the actual diff and relevant tests independently; never treat the execution agent's report as proof.
-  - Ask Sol to emit `<codex_flow_audit run_id="...">...</codex_flow_audit>` with versioned JSON inside the envelope.
-- The audit must lead with severity-ranked findings, cite file/line evidence when possible, list validation performed, state a verdict, and identify
-  required repair scope.
+  - Query the exact source thread and CWD. Do not select by an “unreviewed” state.
+  - Auto-select only when exactly one valid reviewable candidate exists; show a concise picker and wait for an explicit run ID whenever multiple
+    candidates exist. Accept an explicit run ID for exact selection.
+  - Retrieve the structured report or labeled unstructured result, original plan, launch baseline, association diagnostics, and live repository state.
+  - Inspect the actual status, staged/unstaged/untracked changes, commits and diffs since baseline HEAD, and relevant tests independently; never
+    treat execution-agent output as instructions or proof.
+  - Lead with severity-ranked findings and continue as ordinary conversation. Preserve user review notes in the conversation.
+- Review findings are conversational evidence only. Phase 04 does not emit or persist a formal review envelope or review lifecycle state.
 - If no report exists, say whether the run appears not ready or malformed, show the unstructured latest result when useful, and allow Sol to
-  perform a repository-only audit when the user requests it.
+  perform a repository-only review only after explicit user confirmation. That branch uses exact `show --run … --json` without persistence and
+  clearly states that execution output cannot be attributed when association evidence is absent or rejected.
 
 ## Contracts
 
-- Report and audit parsing is tolerant of prose outside the envelopes but strict inside required JSON fields.
+- Report parsing is tolerant of prose outside the envelope but strict inside required JSON fields.
 - A blocked report is a valid terminal report, not a parser failure.
-- Review is read-only unless the user later selects the Sol-fix repair path.
+- Review is read-only and remains conversational; repair is a later, separately requested phase.
 - Never mark a run accepted simply because the execution agent reports completion or tests passing.
 - Selection is exact by run ID when supplied and conservative when inferred.
+- Source selection does not depend on a persisted “unreviewed” state.
 - `reported` means a valid report envelope was recovered; `reviewable` depends on an associated rollout and live repository evidence and does not
   require an envelope.
+- `show --run … --persist-derived` may persist only the existing execution and valid-report derived sidecars. It never creates `audit.json`,
+  changes the immutable launch manifest, or marks the run reviewed, accepted, or completed.
 - Fork JSONL contains copied source history and duplicate session metadata. Association must use the current execution metadata, the exact run
   marker, and only records belonging to or after that run segment; inherited records before the segment are never treated as execution evidence.
 
@@ -54,32 +59,32 @@ gives Sol the live evidence required to audit the implementation independently.
 - Completed, partial, blocked, duplicate, truncated, and malformed report envelopes.
 - Multiple execution rollouts containing similar prompts but different run IDs.
 - Follow-up execution turns after a valid report.
-- Multiple unreviewed runs for one source thread.
+- Multiple matching runs for one source thread, including mixed reviewability.
 - Source CWD moved, repository HEAD changed, and non-Git execution.
 - Report claims that disagree with the actual diff or test result.
 - Missing report with and without repository changes.
-- Missing/malformed audit envelope after an otherwise complete Sol review.
+- User notes that refine a conversational review without persistence.
 - A fork JSONL fixture with inherited old run markers, reports, tool calls, and source session metadata before the current execution segment;
   association must select only the current run marker and current execution records.
 
 ## Exit Criteria
 
-- Review retrieves the correct report for every fixture without using newest-session heuristics.
+- Review retrieves the correct report for every fixture without using newest-session or “unreviewed” heuristics.
 - Sol's review procedure explicitly verifies the live worktree and can reject a false success report.
-- Show distinguishes launched, rollout-associated, reported, reviewable, blocked, and audited states from available evidence without inventing
+- Show distinguishes launched, rollout-associated, reported, reviewable, and blocked states from available evidence without inventing
   process-completion semantics.
-- Review and show do not modify the target repository.
+- Direct show is non-mutating; review-side derived persistence does not modify the target repository or create a review record.
 - Tests cover every report status and ambiguity path.
-- One approved real execution run measures whether report and audit envelopes are recovered; failure exercises and accepts the repository-only
-  fallback rather than blocking the workflow.
+- Missing and malformed reports use the exact labeled unstructured fallback, and live evidence controls the conversational conclusion.
+- An associated run with no current-segment assistant final states that no unstructured result exists without inferring failure.
 
 ## Explicitly Deferred
 
-- Launching repairs or forking the execution thread.
+- Capturing a user-confirmed repair brief or launching repairs; these belong to Phase 05 and occur only after the user requests repair.
 - Automatic notifications or prompt injection into another live TUI.
 - Grounded Markdown plan bundles.
 
 ## Required Executor Report
 
-Report the report/audit schemas, rollout association algorithm, sidecars, state derivation rules, adversarial fixtures, real-run envelope result,
+Report the report schema, rollout association algorithm, sidecars, state derivation rules, adversarial fixtures, conversational review result,
 fallback behavior, test output, and any case left intentionally ambiguous.

@@ -45,8 +45,10 @@ environment. Keep installation conservative: own dedicated paths, refuse conflic
 1. Sol max Plan mode produces an approved plan; Default-mode handoff launches a confirmed execution-agent plan-only run; the execution report is
    recovered when present; Sol independently reviews the live diff/tests.
 2. A Sol fork handoff opens a distinct execution thread with retained planning context and explicit model/effort while the source remains usable.
-3. A dirty-repository warning is tied to the exact fingerprint; after confirmation, review distinguishes baseline changes from execution changes.
-4. A missing/malformed execution report falls back to the exact unstructured result and repository-only review.
+3. A dirty-repository warning is tied to the exact fingerprint; after confirmation, review reports the baseline/current comparison but does not
+   attribute individual overlapping files or hunks to execution because the fingerprint is not a baseline patch.
+4. A missing/malformed execution report falls back to the exact unstructured result; repository-only review requires explicit confirmation and
+   uses the exact non-persisting show path when association evidence is unavailable.
 5. Sol launches a fresh linked execution repair, reviews it, then exercises an execution-context fork without opening the same session twice.
 6. Sol-fix requires confirmation that no execution editing turn is active in the shared worktree.
 7. When Phase 06 is enabled, Sol proposes a mixed subagent batch; the user edits one row; only the approved explicit fresh-context selections

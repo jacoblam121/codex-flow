@@ -19,7 +19,8 @@ alive. Support both clean plan-only context and a fork of the source thread.
   - Immutable `manifest.json` launch facts.
   - Exact `plan.md`.
   - Generated `handoff.md`.
-  - Reserved paths for later `execution.json`, `report.json`, and `audit.json` sidecars; do not create empty success-looking sidecars.
+  - Reserved paths for later `execution.json` and `report.json` sidecars. Preserve the schema-v1 `audit` artifact field/path only as inert legacy
+    compatibility metadata; never create `audit.json` or an empty success-looking sidecar.
 - Build the handoff contract from the approved plan plus run ID, repository metadata, preservation guardrails, validation expectations, and the
   best-effort structured completion-report request with an unstructured fallback.
 - Implement context modes:

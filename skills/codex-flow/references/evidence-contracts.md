@@ -16,8 +16,20 @@ It associates the execution work and later evidence with one run. Preserve the e
 
 The existing versioned `<codex_flow_report run_id="…">` envelope is best effort. A missing, malformed, incomplete, or unparseable report does not prove failure. Repository state, diffs, and tests remain authoritative. Do not infer completion from the envelope alone.
 
-## Later Sol audit
+## Conversational review
 
-Future Sol audits use a run-linked, versioned audit envelope tied to the exact run marker and current repository evidence. Recovery, parsing, persistence, and review of that audit belong to Phase 04. Do not implement those workflows here.
+Conversational review is not a persisted run state. It uses the exact run JSON, the immutable plan and launch manifest, rollout association
+diagnostics, and independently inspected live repository evidence in the current Sol conversation. Review findings and user notes remain
+conversation content only.
 
-Do not add an audit envelope to the execution agent's response in this phase. Do not extract reports, persist recovery sidecars, or review execution results now; the existing launcher handoff's best-effort report request is the complete Phase 03 contract.
+Do not add a `codex_flow_audit` envelope, create `audit.json`, or mark a run audited, reviewed, accepted, or completed. The review-side `show --run … --persist-derived` operation may persist only the existing execution and valid-report derived sidecars. It does not mutate the
+immutable launch manifest or target repository.
+
+The execution report remains best-effort transport. A malformed or missing report falls back to the exact latest assistant result with an explicit
+unstructured label; neither form is proof of correctness. Live repository state, diffs, commits, and independently selected tests remain the
+authority for review conclusions.
+
+When association evidence is missing, malformed, or ambiguous, a repository-only review requires explicit user confirmation and uses exact
+`show --run … --json` without derived persistence. Execution output is then unattributed context, not evidence for that run. An associated run
+may also have no current-segment assistant final; in that case the review reports that no unstructured result was observed and does not infer
+failure.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from types import SimpleNamespace
 
@@ -28,7 +29,7 @@ def test_registered_command_is_clear_and_side_effect_free(capsys):
 
 
 def test_all_deferred_commands_remain_exit_four(capsys):
-    for command in ("doctor", "show", "install", "uninstall"):
+    for command in ("doctor", "install", "uninstall"):
         assert main([command]) == 4
     assert main(["child"]) == 2
     assert "registered but not implemented" in capsys.readouterr().err
@@ -154,3 +155,50 @@ def test_cli_forwards_launch_and_child_arguments(monkeypatch, capsys):
     assert main(["child", run_id]) == 0
     assert child_calls[0][0] == run_id
     assert child_calls[0][1]["environ"] is os.environ
+
+
+def test_show_requires_exact_supported_json_forms(capsys):
+    assert main(["show"]) == 2
+    assert "one of the arguments" in capsys.readouterr().err
+    assert main(["show", "--run", "id"]) == 2
+    assert "requires --json" in capsys.readouterr().err
+    assert main(["show", "--source-thread", "thread", "--json"]) == 2
+    assert "requires --cwd" in capsys.readouterr().err
+    assert main(
+        ["show", "--source-thread", "thread", "--cwd", "/work", "--json", "--persist-derived"]
+    ) == 2
+    assert "only valid with one exact" in capsys.readouterr().err
+    assert main(["show", "--run", "id", "--cwd", "/work", "--json"]) == 2
+    assert "only valid with --source-thread" in capsys.readouterr().err
+
+
+def test_cli_forwards_exact_and_source_show_without_hidden_writes(monkeypatch, capsys):
+    calls = []
+
+    def fake_run(run_id, **kwargs):
+        calls.append(("run", run_id, kwargs))
+        return {"schema_version": 1, "query": {"run_id": run_id}, "run": {}}
+
+    def fake_source(thread, cwd, **kwargs):
+        calls.append(("source", thread, cwd, kwargs))
+        return {
+            "schema_version": 1,
+            "query": {"source_thread": thread, "cwd": cwd},
+            "selection": {"status": "none", "run_id": None},
+            "candidates": [],
+        }
+
+    monkeypatch.setattr("codex_flow.cli.show_run", fake_run)
+    monkeypatch.setattr("codex_flow.cli.show_runs_by_source", fake_source)
+    assert main(["show", "--run", "run-id", "--json", "--persist-derived"]) == 0
+    exact = json.loads(capsys.readouterr().out)
+    assert exact["query"]["run_id"] == "run-id"
+    assert calls[-1][2]["persist_derived"] is True
+    assert calls[-1][2]["environ"] is os.environ
+
+    assert main(
+        ["show", "--source-thread", "source-id", "--cwd", "/work tree", "--json"]
+    ) == 0
+    source = json.loads(capsys.readouterr().out)
+    assert source["candidates"] == []
+    assert calls[-1][0:3] == ("source", "source-id", "/work tree")

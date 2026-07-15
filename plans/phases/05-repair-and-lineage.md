@@ -2,31 +2,32 @@
 
 ## Outcome
 
-Turn an accepted Sol audit into one of three explicit repair paths while preserving the original plan, execution evidence, audit findings, and
-model-selection discipline.
+Turn a user-requested, confirmed repair brief from a conversational Sol review into one of three explicit repair paths while preserving the
+original plan, execution evidence, review context, and model-selection discipline.
 
 ## Prerequisites
 
 - Phase 04 is accepted.
-- The selected run has a complete structured Sol audit or an explicitly acknowledged repository-only/unstructured audit.
+- The selected run has been conversationally reviewed, and the user has explicitly requested repair.
+- A repair brief has been captured and confirmed by the user; review findings alone never authorize repair.
 
 ## In Scope
 
 - Create each repair's immutable launch manifest with parent/root lineage and repair strategy; do not rewrite the historical parent manifest.
-- Extract the latest complete `<codex_flow_audit run_id="...">` for the selected run from the source Sol rollout and persist valid JSON as
-  `audit.json`.
-  When no valid envelope exists, require the user to confirm the exact audit findings text that will be handed to repair.
+- Capture the user-confirmed repair brief only when repair is requested. The brief may cite conversational findings and exact live evidence, but
+  Codex Flow must not invent findings or persist a Phase 04 review envelope.
 - Implement the repair menu with these choices:
   - Fresh linked run, recommended by default.
   - New tab forked from the previous execution thread.
   - Sol fixes directly in the source control thread.
 - Fresh linked repair:
   - Start a clean Codex context.
-  - Include the original approved plan, prior execution report when valid (otherwise labeled unstructured execution result), confirmed Sol audit,
+  - Include the original approved plan, prior execution report when valid (otherwise labeled unstructured execution result), confirmed repair brief,
     current live repository state, and narrowly stated repair objective.
 - Execution-context repair:
   - Use `codex fork <execution-thread-id>` rather than concurrent resume.
-  - Add the Sol audit and current state in the new initial repair prompt.
+  - Add the confirmed repair brief and current state in the new initial repair prompt.
+  - Persist the expected execution-thread fork origin in the repair manifest so later association can require the exact origin.
 - Sol-fix repair:
   - Do not launch another process.
   - Require Default mode and explicit confirmation that Sol may stop being read-only for this repair.
@@ -39,22 +40,23 @@ model-selection discipline.
 ## Contracts
 
 - Every repair run has exactly one parent run and shares the root plan hash.
-- Never mutate a historical report or audit when creating a repair.
+- Never mutate a historical report or conversational review when creating a repair.
 - Forking an execution context reuses history through a new thread; sending a prompt into the existing live execution TUI is not supported.
 - Sol-fix uses the current Sol model. The skill cannot silently change it.
-- A repair prompt contains only the accepted findings and current evidence; do not broaden it into a fresh implementation plan.
-- A missing model-emitted envelope never causes Codex Flow to invent findings; only user-confirmed audit text may replace it.
+- A repair prompt contains only the user-confirmed repair brief and current evidence; do not broaden it into a fresh implementation plan.
+- A missing or malformed model-emitted report never causes Codex Flow to invent findings. User confirmation is required before any repair launch.
+- A repair fork manifest records the expected source execution-thread origin exactly; later rollout association rejects a different origin.
 
 ## Tests
 
 - Fresh repair from completed, partial, and blocked parent runs.
-- Execution-context fork with missing, closed, or ambiguous execution thread.
+- Execution-context fork with missing, closed, or ambiguous execution thread and wrong fork origins.
 - Sol-fix requested from Plan mode and Default mode.
 - Sol-fix accepted/rejected with another execution tab still open, including the explicit idle-turn confirmation.
 - Repaired worktree whose baseline is intentionally dirty from the parent run.
-- Multi-generation lineage and report/audit selection.
+- Multi-generation lineage and exact report selection.
 - Model re-recommendation, manual override, rejection, and approved escalation.
-- Parent report or audit missing/malformed.
+- Parent report missing/malformed and user-confirmed repair brief handling.
 
 ## Exit Criteria
 

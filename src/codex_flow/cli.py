@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from . import __version__
 from .errors import ApplicationError, InvalidCLIUsage, UnsupportedCapability
 from .launcher import launch, run_child
+from .inspection import show_run, show_runs_by_source, to_json
 from .preflight import run_preflight
 
 COMMANDS = (
@@ -46,6 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
             help=(
                 "read-only session and environment preflight"
                 if command == "preflight"
+                else "read-only run and live repository inspection"
+                if command == "show"
                 else "reserved for a later phase"
                 if command != "child"
                 else "internal child entry point; reserved for a later phase"
@@ -72,6 +75,13 @@ def build_parser() -> argparse.ArgumentParser:
             command_parser.add_argument("--dry-run", action="store_true")
         elif command == "child":
             command_parser.add_argument("run_id")
+        elif command == "show":
+            selection = command_parser.add_mutually_exclusive_group(required=True)
+            selection.add_argument("--run")
+            selection.add_argument("--source-thread")
+            command_parser.add_argument("--cwd")
+            command_parser.add_argument("--json", action="store_true")
+            command_parser.add_argument("--persist-derived", action="store_true")
     return parser
 
 
@@ -138,6 +148,31 @@ def _dispatch(args: argparse.Namespace) -> int:
         return 0
     if command == "child":
         return run_child(args.run_id, environ=os.environ)
+    if command == "show":
+        if not args.json:
+            raise InvalidCLIUsage("show currently requires --json")
+        if args.run is not None:
+            if args.cwd is not None:
+                raise InvalidCLIUsage("--cwd is only valid with --source-thread")
+            document = show_run(
+                args.run,
+                environ=os.environ,
+                persist_derived=args.persist_derived,
+            )
+        else:
+            if args.cwd is None:
+                raise InvalidCLIUsage("--source-thread requires --cwd")
+            if args.persist_derived:
+                raise InvalidCLIUsage(
+                    "--persist-derived is only valid with one exact --run"
+                )
+            document = show_runs_by_source(
+                args.source_thread,
+                args.cwd,
+                environ=os.environ,
+            )
+        sys.stdout.write(to_json(document))
+        return 0
     raise UnsupportedCapability(
         f"command '{command}' is registered but not implemented in this phase"
     )

@@ -11,8 +11,8 @@
   3. Press Shift+Tab once to enter Default mode.
   4. Invoke $codex-flow handoff, choose context and execution model.
   5. Launch the selected execution agent in a new tab while Sol remains open as the control/review thread.
-  6. Invoke $codex-flow review to retrieve the execution agent’s available result/report and audit its actual changes.
-  7. Invoke $codex-flow repair to launch a fresh repair, fork the execution context, or let Sol fix it.
+  6. Invoke $codex-flow review to retrieve the execution agent’s available result/report and review its actual changes conversationally.
+  7. If repair is requested, confirm a repair brief, then invoke $codex-flow repair to launch a fresh repair, fork the execution context, or let Sol fix it.
 
   Do not change the global model defaults. The existing plan_mode_reasoning_effort = "max" already makes native planning use Sol max; Sol
   ultra remains selectable through /model.
@@ -38,10 +38,10 @@
       - Require explicit confirmation before calling the launcher.
 
   - $codex-flow review
-      - Select the latest unreviewed run associated with the current Sol thread and repository; show a picker when ambiguous.
-      - Retrieve the execution agent’s structured report when present; otherwise use the exact run's latest assistant result as unstructured context.
-      - Independently inspect the live status, diff, tests, deviations, and unresolved risks.
-      - Produce a run-linked audit that can be consumed by repair.
+      - Query the exact current source thread and CWD; auto-select only one valid reviewable candidate and show a picker for multiple candidates.
+      - Retrieve the execution agent’s structured report when present; otherwise use the exact run's labeled latest assistant result.
+      - Include the original plan, launch baseline, association diagnostics, live repository state, and independent status/diff/test inspection.
+      - Lead with severity-ranked findings and continue as ordinary conversation; do not persist a review lifecycle or review record.
 
   - $codex-flow repair
       - Always offer:
@@ -49,7 +49,9 @@
           - A new tab forked from the previous execution thread.
           - Fix directly in the current Sol thread.
 
-      - Include the original plan, previous structured report or labeled unstructured result, Sol audit findings, and current repository state.
+      - Require a user-confirmed repair brief only when repair is requested. Include the original plan, previous structured report or labeled
+        unstructured result, confirmed repair brief, and current repository state.
+      - Persist the expected execution-thread fork origin in repair-fork manifests for later exact association.
       - Re-run the model recommendation and confirmation menu.
       - Before Sol fixes directly, require confirmation that no execution turn is still editing the shared worktree.
 
@@ -73,8 +75,8 @@
       - CWD, repository root, branch, HEAD, and dirty baseline.
       - Generated handoff prompt.
 
-    Keep launch facts in an immutable manifest. Store discovered execution-thread metadata and recovered report/audit data in separate atomic
-    sidecars rather than mutating the launch record.
+    Keep launch facts in an immutable manifest. Store discovered execution-thread metadata and recovered report data in separate atomic sidecars
+    rather than mutating the launch record.
 
   - Never pass plan, prompt, target CWD, or model text through Windows Terminal. Apart from the fixed/resolved launcher command, the validated
     run ID is the only dynamic child token crossing the boundary; the WSL child reads the handoff locally and invokes Codex with an argv array.
@@ -92,15 +94,15 @@
       - Plan deviations.
       - Remaining issues and recommended follow-up.
 
-  - Treat report and audit envelopes as best-effort transport, never as proof of correctness or task completion. Extract them lazily from the
-    exact rollout; if a marker is missing or malformed, warn Sol, retain the latest assistant result as context, and continue with a live
-    repository-based review.
+  - Treat the report envelope as best-effort transport, never as proof of correctness or task completion. Extract it lazily from the exact
+    rollout; if a marker is missing or malformed, warn Sol, retain the latest assistant result as labeled context, and continue with a live
+    repository-based conversational review.
   - Add a narrow allow rule only for /home/jacob/.local/bin/codex-flow launch; all menus and dirty-worktree confirmation remain mandatory.
   - Add a compact ~/.codex/AGENTS.md trigger instructing Codex to use the skill’s routing policy before subagent spawns. This is behavioral
     guidance, not a mechanical interception or security boundary. Codex loads this global file for every session. Codex AGENTS.md
     documentation (https://developers.openai.com/codex/guides/agents-md)
 
-  - Warn—but do not block or lock—when Git is dirty. Support non-Git directories with a reduced audit warning.
+  - Warn—but do not block or lock—when Git is dirty. Support non-Git directories with a reduced repository-evidence warning.
 
   ## Subagent Routing
 
@@ -146,8 +148,8 @@
   - Add dry-run tests for plan-only, Sol fork, execution-context repair fork, and manual fallback when Windows Terminal is unavailable.
   - Verify dirty and non-Git warnings without blocking launch.
   - Smoke-test that an execution tab opens in Ubuntu at the exact CWD with the selected model/effort while Sol remains usable.
-  - Verify review retrieves the correct report and handles completed, partial, blocked, and missing-report runs.
+  - Verify review retrieves the correct report and handles completed, partial, blocked, missing-report, false-success, note, and ambiguity cases.
   - Validate the skill metadata, four agent TOMLs, global trigger, and narrow approval rule. Separately prove in a fresh session that explicit
     per-spawn role/model/effort fields are visible and honored before accepting delegation routing.
-  - Default to plan-only handoff, a shared worktree without writer locks, latest unreviewed-run selection, and the lowest adequate Pareto-
-    frontier choice.
+  - Default to plan-only handoff, a shared worktree without writer locks, exact source/CWD review selection, and the lowest adequate
+    Pareto-frontier choice.

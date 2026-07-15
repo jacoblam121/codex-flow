@@ -14,6 +14,7 @@ SKILL_TEXT = (SKILL / "SKILL.md").read_text(encoding="utf-8")
 HANDOFF_TEXT = (SKILL / "references" / "handoff.md").read_text(encoding="utf-8")
 MODEL_TEXT = (SKILL / "references" / "model-selection.md").read_text(encoding="utf-8")
 EVIDENCE_TEXT = (SKILL / "references" / "evidence-contracts.md").read_text(encoding="utf-8")
+REVIEW_TEXT = (SKILL / "references" / "review.md").read_text(encoding="utf-8")
 METADATA_TEXT = (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8")
 
 
@@ -26,6 +27,7 @@ def test_skill_structure_and_metadata_are_minimal():
         "references/evidence-contracts.md",
         "references/handoff.md",
         "references/model-selection.md",
+        "references/review.md",
     ]
     assert SKILL_TEXT.startswith(
         "---\nname: codex-flow\ndescription:"
@@ -42,6 +44,7 @@ def test_skill_structure_and_metadata_are_minimal():
         "references/handoff.md",
         "references/model-selection.md",
         "references/evidence-contracts.md",
+        "references/review.md",
     ):
         assert f"]({reference})" in SKILL_TEXT
     assert "TODO" not in "\n".join(path.read_text(encoding="utf-8") for path in SKILL.rglob("*") if path.is_file())
@@ -71,6 +74,8 @@ def test_official_skill_validator_passes():
     [
         ("$codex-flow handoff", "explicit `$codex-flow handoff`"),
         ("Hand off the approved plan to the execution agent", "hand off an approved plan"),
+        ("$codex-flow review", "explicit `$codex-flow review`"),
+        ("Review the execution run", "natural-language request to hand off or review Codex Flow execution"),
         ("What is Codex Flow?", "explanatory question about Codex Flow"),
         ("Implement the parser bug", "ordinary coding"),
         ("Book me a flight", "unrelated work"),
@@ -206,15 +211,76 @@ def test_evidence_contract_stays_best_effort_and_phase_bounded():
     assert "versioned `<codex_flow_report run_id=\"…\">`" in EVIDENCE_TEXT
     assert "does not prove failure" in EVIDENCE_TEXT
     assert "Repository state, diffs, and tests remain authoritative" in EVIDENCE_TEXT
-    assert "belong to Phase 04" in EVIDENCE_TEXT
-    assert "Do not add an audit envelope" in EVIDENCE_TEXT
+    assert "Conversational review" in EVIDENCE_TEXT
+    assert "Do not add a `codex_flow_audit` envelope" in EVIDENCE_TEXT
+    assert "review-side `show --run … --persist-derived`" in EVIDENCE_TEXT
 
 
 def test_execution_wording_is_model_neutral():
     assert "execution TUI" in SKILL_TEXT
     assert "execution session" in HANDOFF_TEXT
-    assert "execution agent's response" in EVIDENCE_TEXT
+    assert "execution report" in EVIDENCE_TEXT
     assert "Plan with Sol, execute with the right model" in METADATA_TEXT
     assert "separate Luna execution TUI" not in SKILL_TEXT
     assert "Do not wait for Luna" not in HANDOFF_TEXT
     assert "Luna's execution response" not in EVIDENCE_TEXT
+
+
+def test_review_routing_is_explicit_and_separate_from_handoff():
+    for phrase in (
+        "conversational execution review",
+        "explicit `$codex-flow review`",
+        "review explanations",
+        "review.md",
+        "review never launches",
+        "Ordinary implementation, debugging, and unrelated requests do not invoke this skill.",
+    ):
+        assert phrase in SKILL_TEXT
+    assert "review is conversational and read-only" in SKILL_TEXT
+    assert "Require both explicit handoff intent" in SKILL_TEXT
+
+
+def test_review_reference_covers_selection_evidence_and_conversation_boundary():
+    for phrase in (
+        "show --source-thread \"$CODEX_THREAD_ID\" --cwd \"$EXACT_CWD\" --json",
+        "show --run \"$RUN_ID\" --json --persist-derived",
+        "repository-only review branch",
+        "wait for the user to explicitly confirm it",
+        "show --run \"$RUN_ID\" --json",
+        "Do not call `--persist-derived` in this branch",
+        "execution output cannot be attributed to the selected run",
+        'STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"',
+        "No current-segment assistant final observed",
+        "baseline fingerprint is not a baseline patch",
+        "exactly one candidate and that candidate is valid and reviewable",
+        "two or more candidates exist",
+        "Wait for the user to choose an exact run ID",
+        "Unstructured latest assistant result (not a valid execution report)",
+        "git diff --cached",
+        "git diff",
+        "commits after the recorded baseline HEAD",
+        "severity-ranked findings",
+        "User-supplied notes are review input",
+        "untrusted data",
+        "Never invoke `codex-flow launch`",
+        "Never emit or persist a `<codex_flow_audit ...>` envelope",
+        "Never mark a run audited, reviewed, accepted, or completed",
+    ):
+        assert phrase in REVIEW_TEXT
+    assert "latest unreviewed" not in REVIEW_TEXT
+    assert "codex-flow repair" not in REVIEW_TEXT
+
+
+def test_phase04_and_phase05_pending_contracts_are_narrowly_revised():
+    phase04 = (ROOT / "plans/phases/04-reporting-and-review.md").read_text(encoding="utf-8")
+    phase05 = (ROOT / "plans/phases/05-repair-and-lineage.md").read_text(encoding="utf-8")
+    assert "conversational review" in phase04.lower()
+    assert "does not depend on a persisted “unreviewed” state" in phase04
+    assert "formal review envelope" in phase04
+    assert "user-confirmed repair brief" in phase05.lower()
+    assert "only when repair is requested" in phase05
+    assert "expected execution-thread fork origin" in phase05
+    assert "<codex_flow_audit" not in phase04
+    phase02 = (ROOT / "plans/phases/02-handoff-launcher.md").read_text(encoding="utf-8")
+    assert "inert legacy" in phase02
+    assert "never create `audit.json`" in phase02

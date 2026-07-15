@@ -14,6 +14,8 @@ from .errors import FutureSchemaError
 
 UTC = timezone.utc
 SCHEMA_VERSION = 1
+EXECUTION_SCHEMA_VERSION = 1
+REPORT_SCHEMA_VERSION = 1
 _UUID_PATTERN = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
@@ -80,6 +82,37 @@ def _nonempty(value: str, field_name: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field_name} must be a non-empty string")
     return value
+
+
+def _strict_fields(
+    document: Mapping[str, Any], required: set[str], name: str
+) -> None:
+    missing = required - set(document)
+    unexpected = set(document) - required
+    if missing:
+        raise ValueError(f"{name} is missing required fields: {', '.join(sorted(missing))}")
+    if unexpected:
+        raise ValueError(f"{name} contains unsupported fields: {', '.join(sorted(unexpected))}")
+
+
+def _line_number(value: Any, field_name: str, *, nullable: bool = False) -> int | None:
+    if nullable and value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        suffix = " or null" if nullable else ""
+        raise ValueError(f"{field_name} must be a positive integer{suffix}")
+    return value
+
+
+def _string_array(value: Any, field_name: str) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise ValueError(f"{field_name} must be an array")
+    result: list[str] = []
+    for index, entry in enumerate(value):
+        if not isinstance(entry, str) or not entry:
+            raise ValueError(f"{field_name}[{index}] must be a non-empty string")
+        result.append(entry)
+    return tuple(result)
 
 
 def validate_sha256(value: str, field_name: str = "sha256") -> str:
@@ -238,6 +271,221 @@ class RunManifest:
         return manifest_from_json(document)
 
 
+@dataclass(frozen=True)
+class ReportValidation:
+    """One command/result entry in a schema-v1 execution report."""
+
+    command: str
+    exit_code: int | None
+    outcome: str
+
+    def __post_init__(self) -> None:
+        _nonempty(self.command, "validation.command")
+        if self.exit_code is not None and (
+            not isinstance(self.exit_code, int) or isinstance(self.exit_code, bool)
+        ):
+            raise ValueError("validation.exit_code must be an integer or null")
+        _nonempty(self.outcome, "validation.outcome")
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ReportPayload:
+    """Strict, versioned payload carried by a Codex Flow report envelope."""
+
+    schema_version: int
+    status: str
+    summary: str
+    files_changed: tuple[str, ...]
+    validation: tuple[ReportValidation, ...]
+    deviations: tuple[str, ...]
+    unresolved_issues: tuple[str, ...]
+    recommended_follow_up: tuple[str, ...]
+
+    CURRENT_SCHEMA_VERSION: ClassVar[int] = REPORT_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.schema_version, int) or isinstance(self.schema_version, bool):
+            raise ValueError("report schema_version must be an integer")
+        if self.schema_version > REPORT_SCHEMA_VERSION:
+            raise FutureSchemaError(
+                f"unsupported future report schema version: {self.schema_version}"
+            )
+        if self.schema_version != REPORT_SCHEMA_VERSION:
+            raise ValueError(f"unsupported report schema version: {self.schema_version}")
+        if self.status not in {"completed", "partial", "blocked"}:
+            raise ValueError("report status must be completed, partial, or blocked")
+        _nonempty(self.summary, "report summary")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "status": self.status,
+            "summary": self.summary,
+            "files_changed": list(self.files_changed),
+            "validation": [entry.to_dict() for entry in self.validation],
+            "deviations": list(self.deviations),
+            "unresolved_issues": list(self.unresolved_issues),
+            "recommended_follow_up": list(self.recommended_follow_up),
+        }
+
+    @classmethod
+    def from_dict(cls, document: Mapping[str, Any]) -> "ReportPayload":
+        return report_payload_from_dict(document)
+
+
+@dataclass(frozen=True)
+class AssistantResultPointer:
+    """Stable pointer to one canonical assistant final in a rollout."""
+
+    line_number: int
+    content_index: int
+    sha256: str
+
+    def __post_init__(self) -> None:
+        _line_number(self.line_number, "assistant_result.line_number")
+        if (
+            not isinstance(self.content_index, int)
+            or isinstance(self.content_index, bool)
+            or self.content_index < 0
+        ):
+            raise ValueError("assistant_result.content_index must be a non-negative integer")
+        validate_sha256(self.sha256, "assistant_result.sha256")
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ExecutionSidecar:
+    """Schema-v1 cache of live execution-rollout association evidence."""
+
+    schema_version: int
+    run_id: str
+    execution_thread_id: str
+    rollout_path: str
+    session_meta_line: int
+    session_timestamp: str
+    forked_from_id: str | None
+    marker_turn_id: str
+    marker_line: int
+    marker_timestamp: str
+    task_started_line: int
+    turn_context_line: int
+    segment_start_line: int
+    segment_end_before_line: int | None
+    observed_end_line: int
+    latest_assistant_result: AssistantResultPointer | None
+
+    CURRENT_SCHEMA_VERSION: ClassVar[int] = EXECUTION_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.schema_version, int)
+            or isinstance(self.schema_version, bool)
+            or self.schema_version != EXECUTION_SCHEMA_VERSION
+        ):
+            if isinstance(self.schema_version, int) and self.schema_version > EXECUTION_SCHEMA_VERSION:
+                raise FutureSchemaError(
+                    f"unsupported future execution schema version: {self.schema_version}"
+                )
+            raise ValueError(f"unsupported execution schema version: {self.schema_version}")
+        object.__setattr__(self, "run_id", validate_run_id(self.run_id))
+        object.__setattr__(self, "execution_thread_id", _validate_thread_id(self.execution_thread_id))
+        rollout = Path(self.rollout_path).expanduser()
+        canonical_rollout = str(rollout.resolve(strict=False))
+        if not rollout.is_absolute() or self.rollout_path != canonical_rollout:
+            raise ValueError("rollout_path must be a canonical absolute path")
+        for field_name in (
+            "session_meta_line",
+            "marker_line",
+            "task_started_line",
+            "turn_context_line",
+            "segment_start_line",
+            "observed_end_line",
+        ):
+            _line_number(getattr(self, field_name), field_name)
+        _line_number(self.segment_end_before_line, "segment_end_before_line", nullable=True)
+        _validate_timestamp(self.session_timestamp)
+        _validate_timestamp(self.marker_timestamp)
+        if self.forked_from_id is not None:
+            object.__setattr__(self, "forked_from_id", _validate_thread_id(self.forked_from_id))
+        object.__setattr__(self, "marker_turn_id", _validate_thread_id(self.marker_turn_id))
+        if self.segment_start_line != self.marker_line:
+            raise ValueError("segment_start_line must equal marker_line")
+        if self.segment_end_before_line is not None and self.segment_end_before_line <= self.marker_line:
+            raise ValueError("segment_end_before_line must follow marker_line")
+        if self.observed_end_line < self.marker_line:
+            raise ValueError("observed_end_line must not precede marker_line")
+
+    def to_dict(self) -> dict[str, Any]:
+        result = asdict(self)
+        return result
+
+    @classmethod
+    def from_dict(cls, document: Mapping[str, Any]) -> "ExecutionSidecar":
+        return execution_sidecar_from_dict(document)
+
+
+@dataclass(frozen=True)
+class ReportSidecar:
+    """Schema-v1 cache of a validated report and exact rollout provenance."""
+
+    schema_version: int
+    run_id: str
+    execution_thread_id: str
+    rollout_path: str
+    assistant_result: AssistantResultPointer
+    envelope_index: int
+    envelope_sha256: str
+    report: ReportPayload
+
+    CURRENT_SCHEMA_VERSION: ClassVar[int] = REPORT_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.schema_version, int)
+            or isinstance(self.schema_version, bool)
+            or self.schema_version != REPORT_SCHEMA_VERSION
+        ):
+            if isinstance(self.schema_version, int) and self.schema_version > REPORT_SCHEMA_VERSION:
+                raise FutureSchemaError(
+                    f"unsupported future report sidecar schema version: {self.schema_version}"
+                )
+            raise ValueError(f"unsupported report sidecar schema version: {self.schema_version}")
+        object.__setattr__(self, "run_id", validate_run_id(self.run_id))
+        object.__setattr__(self, "execution_thread_id", _validate_thread_id(self.execution_thread_id))
+        rollout = Path(self.rollout_path).expanduser()
+        canonical_rollout = str(rollout.resolve(strict=False))
+        if not rollout.is_absolute() or self.rollout_path != canonical_rollout:
+            raise ValueError("rollout_path must be a canonical absolute path")
+        if (
+            not isinstance(self.envelope_index, int)
+            or isinstance(self.envelope_index, bool)
+            or self.envelope_index < 0
+        ):
+            raise ValueError("envelope_index must be a non-negative integer")
+        validate_sha256(self.envelope_sha256, "envelope_sha256")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "run_id": self.run_id,
+            "execution_thread_id": self.execution_thread_id,
+            "rollout_path": self.rollout_path,
+            "assistant_result": self.assistant_result.to_dict(),
+            "envelope_index": self.envelope_index,
+            "envelope_sha256": self.envelope_sha256,
+            "report": self.report.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, document: Mapping[str, Any]) -> "ReportSidecar":
+        return report_sidecar_from_dict(document)
+
+
 def _object(document: Mapping[str, Any], name: str) -> Mapping[str, Any]:
     value = document.get(name)
     if not isinstance(value, Mapping):
@@ -291,3 +539,147 @@ def manifest_from_json(document: str) -> RunManifest:
     except json.JSONDecodeError as error:
         raise ValueError("manifest is not valid JSON") from error
     return manifest_from_dict(decoded)
+
+
+def report_payload_from_dict(document: Mapping[str, Any]) -> ReportPayload:
+    """Validate the exact schema-v1 execution report payload."""
+
+    if not isinstance(document, Mapping):
+        raise ValueError("report payload must be a JSON object")
+    required = {
+        "schema_version",
+        "status",
+        "summary",
+        "files_changed",
+        "validation",
+        "deviations",
+        "unresolved_issues",
+        "recommended_follow_up",
+    }
+    _strict_fields(document, required, "report payload")
+    schema_version = document["schema_version"]
+    if not isinstance(schema_version, int) or isinstance(schema_version, bool):
+        raise ValueError("report schema_version must be an integer")
+    if schema_version > REPORT_SCHEMA_VERSION:
+        raise FutureSchemaError(
+            f"unsupported future report schema version: {schema_version}"
+        )
+    raw_validation = document["validation"]
+    if not isinstance(raw_validation, list):
+        raise ValueError("validation must be an array")
+    validation: list[ReportValidation] = []
+    validation_fields = {"command", "exit_code", "outcome"}
+    for index, entry in enumerate(raw_validation):
+        if not isinstance(entry, Mapping):
+            raise ValueError(f"validation[{index}] must be an object")
+        _strict_fields(entry, validation_fields, f"validation[{index}]")
+        validation.append(
+            ReportValidation(
+                command=entry["command"],
+                exit_code=entry["exit_code"],
+                outcome=entry["outcome"],
+            )
+        )
+    return ReportPayload(
+        schema_version=schema_version,
+        status=document["status"],
+        summary=document["summary"],
+        files_changed=_string_array(document["files_changed"], "files_changed"),
+        validation=tuple(validation),
+        deviations=_string_array(document["deviations"], "deviations"),
+        unresolved_issues=_string_array(document["unresolved_issues"], "unresolved_issues"),
+        recommended_follow_up=_string_array(
+            document["recommended_follow_up"], "recommended_follow_up"
+        ),
+    )
+
+
+def _assistant_pointer_from_dict(
+    document: Mapping[str, Any], name: str = "assistant_result"
+) -> AssistantResultPointer:
+    if not isinstance(document, Mapping):
+        raise ValueError(f"{name} must be an object")
+    _strict_fields(document, {"line_number", "content_index", "sha256"}, name)
+    return AssistantResultPointer(
+        line_number=document["line_number"],
+        content_index=document["content_index"],
+        sha256=document["sha256"],
+    )
+
+
+def execution_sidecar_from_dict(document: Mapping[str, Any]) -> ExecutionSidecar:
+    """Strictly decode an execution association cache."""
+
+    if not isinstance(document, Mapping):
+        raise ValueError("execution sidecar must be a JSON object")
+    fields = {
+        "schema_version",
+        "run_id",
+        "execution_thread_id",
+        "rollout_path",
+        "session_meta_line",
+        "session_timestamp",
+        "forked_from_id",
+        "marker_turn_id",
+        "marker_line",
+        "marker_timestamp",
+        "task_started_line",
+        "turn_context_line",
+        "segment_start_line",
+        "segment_end_before_line",
+        "observed_end_line",
+        "latest_assistant_result",
+    }
+    _strict_fields(document, fields, "execution sidecar")
+    raw_pointer = document["latest_assistant_result"]
+    pointer = (
+        None
+        if raw_pointer is None
+        else _assistant_pointer_from_dict(raw_pointer, "latest_assistant_result")
+    )
+    return ExecutionSidecar(
+        schema_version=document["schema_version"],
+        run_id=document["run_id"],
+        execution_thread_id=document["execution_thread_id"],
+        rollout_path=document["rollout_path"],
+        session_meta_line=document["session_meta_line"],
+        session_timestamp=document["session_timestamp"],
+        forked_from_id=document["forked_from_id"],
+        marker_turn_id=document["marker_turn_id"],
+        marker_line=document["marker_line"],
+        marker_timestamp=document["marker_timestamp"],
+        task_started_line=document["task_started_line"],
+        turn_context_line=document["turn_context_line"],
+        segment_start_line=document["segment_start_line"],
+        segment_end_before_line=document["segment_end_before_line"],
+        observed_end_line=document["observed_end_line"],
+        latest_assistant_result=pointer,
+    )
+
+
+def report_sidecar_from_dict(document: Mapping[str, Any]) -> ReportSidecar:
+    """Strictly decode a validated report cache with provenance."""
+
+    if not isinstance(document, Mapping):
+        raise ValueError("report sidecar must be a JSON object")
+    fields = {
+        "schema_version",
+        "run_id",
+        "execution_thread_id",
+        "rollout_path",
+        "assistant_result",
+        "envelope_index",
+        "envelope_sha256",
+        "report",
+    }
+    _strict_fields(document, fields, "report sidecar")
+    return ReportSidecar(
+        schema_version=document["schema_version"],
+        run_id=document["run_id"],
+        execution_thread_id=document["execution_thread_id"],
+        rollout_path=document["rollout_path"],
+        assistant_result=_assistant_pointer_from_dict(document["assistant_result"]),
+        envelope_index=document["envelope_index"],
+        envelope_sha256=document["envelope_sha256"],
+        report=report_payload_from_dict(document["report"]),
+    )

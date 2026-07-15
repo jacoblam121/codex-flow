@@ -15,8 +15,8 @@ The grounded-plan-bundle feature in `../deferred/grounded-plan-bundles.md` is no
 | [01 — Session and preflight core](01-session-and-preflight.md) | Exact rollout discovery, approved-plan extraction, Git preflight, and model validation | 00 |
 | [02 — Handoff launcher](02-handoff-launcher.md) | Plan-only and Sol-fork execution tabs launch safely in WSL/Windows Terminal | 01 |
 | [03 — Skill and handoff UX](03-skill-and-handoff.md) | `$codex-flow handoff` and the minimal discoverable skill workflow | 02 |
-| [04 — Reporting and review](04-reporting-and-review.md) | Exact execution evidence is associated and Sol audits the live implementation | 03 |
-| [05 — Repair and run lineage](05-repair-and-lineage.md) | Fresh repair, Luna-context fork, and Sol-fix paths work from an audit | 04 |
+| [04 — Reporting and conversational review](04-reporting-and-review.md) | Exact execution evidence is associated and Sol reviews the live implementation conversationally | 03 |
+| [05 — Repair and run lineage](05-repair-and-lineage.md) | Fresh repair, execution-context fork, and Sol-fix paths work from a user-confirmed repair brief | 04 |
 | [06 — Delegation routing](06-delegation-routing.md) | Capability-gated custom roles, batch approval, and explicit Pareto model routing | 05 |
 | [07 — Installation and validation](07-installation-and-validation.md) | Idempotent personal installation and end-to-end validation | 05; 06 when routing is enabled |
 
@@ -31,7 +31,7 @@ The grounded-plan-bundle feature in `../deferred/grounded-plan-bundles.md` is no
 - Treat rollout JSONL as a versioned external format: parse defensively, ignore unknown records, and fail with actionable errors when required
   records are absent.
 - Keep operational state in the XDG state directory, never in the target repository.
-- Treat model-emitted report/audit envelopes and skill/AGENTS routing instructions as useful behavioral interfaces, not security or correctness
+- Treat model-emitted report envelopes and skill/AGENTS routing instructions as useful behavioral interfaces, not security or correctness
   boundaries. Live repository evidence remains authoritative.
 - Do not silently fall back to inherited parent settings when explicit subagent role/model/effort selection is unavailable.
 - Do not implement the deferred grounded-plan functionality while completing a core phase.

@@ -1,21 +1,28 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
-import hashlib
 
 import pytest
 
 from codex_flow.contracts import (
+    AssistantResultPointer,
     ArtifactPaths,
+    ExecutionSidecar,
     HandoffSelection,
     RepositoryBaseline,
     RunIdentity,
     RunManifest,
+    ReportPayload,
+    ReportSidecar,
+    ReportValidation,
     ThreadReference,
+    execution_sidecar_from_dict,
     manifest_from_dict,
+    report_sidecar_from_dict,
     utc_timestamp,
     validate_run_id,
 )
@@ -159,3 +166,53 @@ def test_noncanonical_or_invalid_timestamps_are_rejected(timestamp):
 def test_execution_thread_reference_remains_reusable_for_future_sidecar():
     reference = ThreadReference(thread_id=str(uuid4()), source_kind="execution")
     assert reference.source_kind == "execution"
+
+
+def test_versioned_execution_and_report_sidecars_round_trip_strictly():
+    run_id = str(uuid4())
+    execution_thread = "019f6000-0000-7000-8000-000000000001"
+    pointer = AssistantResultPointer(12, 0, "a" * 64)
+    execution = ExecutionSidecar(
+        schema_version=1,
+        run_id=run_id,
+        execution_thread_id=execution_thread,
+        rollout_path="/tmp/rollout.jsonl",
+        session_meta_line=1,
+        session_timestamp="2026-07-14T10:00:00.000Z",
+        forked_from_id=None,
+        marker_turn_id="019f6000-0000-7000-8000-000000000011",
+        marker_line=5,
+        marker_timestamp="2026-07-14T10:00:01.000Z",
+        task_started_line=2,
+        turn_context_line=4,
+        segment_start_line=5,
+        segment_end_before_line=None,
+        observed_end_line=12,
+        latest_assistant_result=pointer,
+    )
+    assert execution_sidecar_from_dict(execution.to_dict()) == execution
+    payload = ReportPayload(
+        schema_version=1,
+        status="completed",
+        summary="done",
+        files_changed=(),
+        validation=(ReportValidation("pytest", 0, "passed"),),
+        deviations=(),
+        unresolved_issues=(),
+        recommended_follow_up=(),
+    )
+    report = ReportSidecar(
+        schema_version=1,
+        run_id=run_id,
+        execution_thread_id=execution_thread,
+        rollout_path="/tmp/rollout.jsonl",
+        assistant_result=pointer,
+        envelope_index=0,
+        envelope_sha256="b" * 64,
+        report=payload,
+    )
+    assert report_sidecar_from_dict(report.to_dict()) == report
+    unexpected = report.to_dict()
+    unexpected["accepted"] = True
+    with pytest.raises(ValueError, match="unsupported fields"):
+        report_sidecar_from_dict(unexpected)

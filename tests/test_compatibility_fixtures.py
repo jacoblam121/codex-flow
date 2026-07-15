@@ -53,3 +53,34 @@ def test_sanitized_subagent_fixture_is_distinguishable_for_later_rejection():
     )
     assert record["payload"]["thread_source"] == "subagent"
     assert record["payload"]["id"] != record["payload"]["session_id"]
+
+
+def test_sanitized_execution_fixtures_preserve_root_and_fork_record_ordering():
+    root = [
+        json.loads(line)
+        for line in (FIXTURES / "sanitized_execution_root.jsonl").read_text().splitlines()
+    ]
+    fork = [
+        json.loads(line)
+        for line in (FIXTURES / "sanitized_execution_fork.jsonl").read_text().splitlines()
+    ]
+    assert root[0]["type"] == "session_meta"
+    assert root[0]["payload"].get("forked_from_id") is None
+    assert fork[0]["type"] == "session_meta"
+    assert fork[0]["payload"]["forked_from_id"] == fork[1]["payload"]["id"]
+    assert fork[1]["type"] == "session_meta"
+    current_marker = next(
+        index
+        for index, record in enumerate(fork)
+        if record["type"] == "response_item"
+        and record["payload"].get("role") == "user"
+        and "550e8400-e29b-41d4-a716-446655440000" in json.dumps(record)
+    )
+    inherited_final = next(
+        index
+        for index, record in enumerate(fork)
+        if record["type"] == "response_item"
+        and record["payload"].get("role") == "assistant"
+    )
+    assert inherited_final < current_marker
+    assert all("/home/" not in json.dumps(record) for record in root + fork)

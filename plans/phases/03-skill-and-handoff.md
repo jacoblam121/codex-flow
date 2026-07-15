@@ -16,7 +16,7 @@ core model/context selection and confirmation experience, not subagent routing.
 - Keep `SKILL.md` concise and put detailed policies in directly linked references:
   - Handoff and native-mode boundary workflow.
   - Execution model recommendation and escalation policy.
-  - Report and audit output contracts needed by later phases.
+  - Report output contracts and review evidence needed by later phases.
 - Generate matching recommended `agents/openai.yaml` metadata; it remains optional Codex UI metadata inside the skill directory.
 - Implement `$codex-flow handoff` behavior:
   - Run deterministic preflight against the invoking root thread.
@@ -28,7 +28,7 @@ core model/context selection and confirmation experience, not subagent routing.
   - Show the dirty-status warning and exact plan preview/hash.
   - Call the absolute launcher path only after explicit confirmation.
 - State the host boundary plainly: the skill can launch another TUI but cannot change the model or mode of the currently running Sol TUI.
-- Include the run marker and best-effort versioned report/audit instructions in generated handoffs, while stating that live diff/tests are the
+- Include the run marker and best-effort versioned report instructions in generated handoffs, while stating that live diff/tests are the
   review authority.
 - Provide an explicitly approved, reversible development link for the CLI and skill so a fresh Codex session can forward-test discovery. Do not
   implement the final installer, global `AGENTS.md`, personal roles, or approval rule here.
@@ -43,7 +43,7 @@ core model/context selection and confirmation experience, not subagent routing.
 - One combined user confirmation covers plan hash, context mode, execution model/effort, repository baseline, and dirty-state fingerprint.
 - Native mode detection comes from the exact rollout characterized in Phases 00-01, not from parsing the user's words.
 - Model recommendations are advisory until confirmed; no model or effort changes silently.
-- Report/audit formatting is a behavioral request with a degraded fallback, not a guarantee that the model will emit valid structure.
+- Report formatting is a behavioral request with a degraded fallback, not a guarantee that the model will emit valid structure.
 
 ## Tests
 
@@ -66,7 +66,7 @@ core model/context selection and confirmation experience, not subagent routing.
 ## Explicitly Deferred
 
 - Personal subagent roles, global routing guidance, and explicit per-spawn model/effort selection (Phase 06).
-- Automated execution-report recovery and Sol audit.
+- Automated execution-report recovery and conversational Sol review.
 - Repair handoffs.
 - Final install/uninstall, approval-rule installation, and conflict handling.
 - Grounded Markdown plan bundles.
