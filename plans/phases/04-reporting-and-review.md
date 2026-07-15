@@ -2,7 +2,7 @@
 
 ## Outcome
 
-When Luna finishes or blocks, `$codex-flow review` associates the exact execution rollout, recovers its structured report when available, and
+When the execution agent finishes or blocks, `$codex-flow review` associates the exact execution rollout, recovers its structured report when available, and
 gives Sol the live evidence required to audit the implementation independently.
 
 ## Prerequisites
@@ -25,12 +25,12 @@ gives Sol the live evidence required to audit the implementation independently.
 - Implement one read-only CLI inspection surface:
   - `codex-flow show --run <id> --json` for one exact run.
   - `codex-flow show --source-thread <id> --cwd <path> --json` for conservative run selection/listing.
-- Derive run state from manifests and rollouts rather than requiring Luna to write bookkeeping files.
+- Derive run state from manifests and rollouts rather than requiring the execution agent to write bookkeeping files.
 - Implement `$codex-flow review` behavior:
   - Choose the latest unreviewed run for the current source thread and repository.
   - Show a picker if more than one run is plausible.
   - Retrieve the structured report or labeled unstructured result, plan, baseline, and live Git state.
-  - Inspect the actual diff and relevant tests independently; never treat Luna's report as proof.
+  - Inspect the actual diff and relevant tests independently; never treat the execution agent's report as proof.
   - Ask Sol to emit `<codex_flow_audit run_id="...">...</codex_flow_audit>` with versioned JSON inside the envelope.
 - The audit must lead with severity-ranked findings, cite file/line evidence when possible, list validation performed, state a verdict, and identify
   required repair scope.
@@ -42,7 +42,7 @@ gives Sol the live evidence required to audit the implementation independently.
 - Report and audit parsing is tolerant of prose outside the envelopes but strict inside required JSON fields.
 - A blocked report is a valid terminal report, not a parser failure.
 - Review is read-only unless the user later selects the Sol-fix repair path.
-- Never mark a run accepted simply because Luna reports completion or tests passing.
+- Never mark a run accepted simply because the execution agent reports completion or tests passing.
 - Selection is exact by run ID when supplied and conservative when inferred.
 - `reported` means a valid report envelope was recovered; `reviewable` depends on an associated rollout and live repository evidence and does not
   require an envelope.
@@ -53,7 +53,7 @@ gives Sol the live evidence required to audit the implementation independently.
 
 - Completed, partial, blocked, duplicate, truncated, and malformed report envelopes.
 - Multiple execution rollouts containing similar prompts but different run IDs.
-- Follow-up Luna turns after a valid report.
+- Follow-up execution turns after a valid report.
 - Multiple unreviewed runs for one source thread.
 - Source CWD moved, repository HEAD changed, and non-Git execution.
 - Report claims that disagree with the actual diff or test result.
@@ -70,7 +70,7 @@ gives Sol the live evidence required to audit the implementation independently.
   process-completion semantics.
 - Review and show do not modify the target repository.
 - Tests cover every report status and ambiguity path.
-- One approved real Luna run measures whether report and audit envelopes are recovered; failure exercises and accepts the repository-only
+- One approved real execution run measures whether report and audit envelopes are recovered; failure exercises and accepts the repository-only
   fallback rather than blocking the workflow.
 
 ## Explicitly Deferred

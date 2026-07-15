@@ -1,4 +1,4 @@
-  # Codex Flow: Persistent Sol Planning and Luna Execution
+  # Codex Flow: Persistent Sol Planning and Model-Selected Execution
 
   ## Summary
 
@@ -10,9 +10,9 @@
   2. Approve the final plan.
   3. Press Shift+Tab once to enter Default mode.
   4. Invoke $codex-flow handoff, choose context and execution model.
-  5. Launch Luna in a new tab while Sol remains open as the control/review thread.
-  6. Invoke $codex-flow review to retrieve Luna’s available execution result/report and audit its actual changes.
-  7. Invoke $codex-flow repair to launch a fresh repair, fork Luna’s context, or let Sol fix it.
+  5. Launch the selected execution agent in a new tab while Sol remains open as the control/review thread.
+  6. Invoke $codex-flow review to retrieve the execution agent’s available result/report and audit its actual changes.
+  7. Invoke $codex-flow repair to launch a fresh repair, fork the execution context, or let Sol fix it.
 
   Do not change the global model defaults. The existing plan_mode_reasoning_effort = "max" already makes native planning use Sol max; Sol
   ultra remains selectable through /model.
@@ -39,19 +39,19 @@
 
   - $codex-flow review
       - Select the latest unreviewed run associated with the current Sol thread and repository; show a picker when ambiguous.
-      - Retrieve Luna’s structured report when present; otherwise use the exact run's latest assistant result as unstructured context.
+      - Retrieve the execution agent’s structured report when present; otherwise use the exact run's latest assistant result as unstructured context.
       - Independently inspect the live status, diff, tests, deviations, and unresolved risks.
       - Produce a run-linked audit that can be consumed by repair.
 
   - $codex-flow repair
       - Always offer:
           - Fresh linked execution context, recommended by default.
-          - A new tab forked from the previous Luna thread.
+          - A new tab forked from the previous execution thread.
           - Fix directly in the current Sol thread.
 
       - Include the original plan, previous structured report or labeled unstructured result, Sol audit findings, and current repository state.
       - Re-run the model recommendation and confirmation menu.
-      - Before Sol fixes directly, require confirmation that no Luna turn is still editing the shared worktree.
+      - Before Sol fixes directly, require confirmation that no execution turn is still editing the shared worktree.
 
   - codex-flow doctor, preflight, and show provide deterministic diagnostics and read-only run inspection.
 
@@ -85,7 +85,7 @@
     (https://learn.microsoft.com/windows/terminal/command-line-arguments)
 
   - Launch plan-only runs with explicit codex -C … -m … -c model_reasoning_effort=…; launch context-preserving runs through codex fork.
-  - Ask Luna to end completed, partial, and blocked runs with a machine-locatable <codex_flow_report run_id="…"> containing versioned JSON for:
+  - Ask the execution agent to end completed, partial, and blocked runs with a machine-locatable <codex_flow_report run_id="…"> containing versioned JSON for:
       - Status and summary.
       - Files changed.
       - Commands/tests and outcomes.
@@ -116,23 +116,25 @@
   a capability-gated, experimental integration; if explicit fields are unavailable, do not silently inherit Sol's model and do not generate a
   role-by-model matrix. Codex subagent documentation (https://developers.openai.com/codex/subagents)
 
-  Use this exact recommendation ladder:
+  Use this exact horizon-aware Pareto frontier:
 
-  | Rung | Typical recommendation |
-  | --- | --- |
-  | Luna low | Mechanical lookup or trivial validation |
-  | Luna medium | Bounded exploration or documentation extraction |
-  | Luna xhigh | Cross-file exploration or moderate synthesis |
-  | Luna max | Broad code audit, correctness analysis, or execution verification |
-  | Sol high | Ambiguous causal or architectural investigation |
-  | Sol max | High-risk global synthesis or escalation after Luna proves insufficient |
+  | Capability tier | Automatic choice(s) | Typical recommendation |
+  | --- | --- | --- |
+  | 1 | Luna low | Mechanical lookup or trivial validation |
+  | 2 | Luna medium | Bounded exploration or documentation extraction |
+  | 3 | Luna xhigh | Ordinary execution, slightly complex subagent work, or moderate synthesis; default when the upper tier is not clearly required |
+  | 4 | Luna max / Sol medium | Luna max for short, concentrated difficulty; Sol medium for long-horizon, multi-stage work where token efficiency justifies its greater cost |
+  | 5 | Sol high | Inherently complex, architecture-sensitive, low-level/systems, correctness-critical, or insufficient Tier 4 work |
+  | 6 | Sol max | Highest-uncertainty or repeated-failure escalation |
 
-  Encode only the six automatic recommendation rungs. Populate Luna high, other Sol efforts, Sol ultra, Terra, and any other manual choices
-  from the current model catalog; they remain manually selectable but are never automatically recommended.
+  Encode seven automatic choices across six capability tiers. Luna high, Sol low/xhigh/ultra, Terra, and any other manual choices come from the
+  current model catalog; they remain manually selectable but are never automatically recommended. Keep Luna xhigh as the ordinary default,
+  prefer Luna max when the Tier 4 horizon is unclear, and use Sol medium for long-horizon work. A peer switch caused by changed horizon is
+  rerouting, not escalation. If either Tier 4 peer is insufficient, escalate to Sol high and then Sol max.
 
   Before every spawn batch, present a manifest containing task, role, recommended model/effort, and rationale. Accept whole-batch approval or
   row edits. Spawn with explicit model and effort only after approval, using self-contained prompts rather than full-history inheritance. If
-  results are insufficient, recommend the next rung and request approval again; never escalate silently. This is an instruction-driven personal
+  results are insufficient, recommend the appropriate higher frontier choice and request approval again; never escalate silently. This is an instruction-driven personal
   workflow and must be forward-tested, not described as hard enforcement.
 
   ## Test Plan and Defaults
@@ -141,11 +143,11 @@
     plan fallbacks, mode records, and root/subagent collisions.
   - Unit-test rollout parsing with root/subagent collisions, multiple plans, malformed records, missing reports, and multiple linked repairs.
   - Test model validation, run-ID validation, paths containing spaces, prompt injection resistance, and Windows/WSL argv serialization.
-  - Add dry-run tests for plan-only, Sol fork, Luna-context repair fork, and manual fallback when Windows Terminal is unavailable.
+  - Add dry-run tests for plan-only, Sol fork, execution-context repair fork, and manual fallback when Windows Terminal is unavailable.
   - Verify dirty and non-Git warnings without blocking launch.
-  - Smoke-test that a Luna tab opens in Ubuntu at the exact CWD with the selected model/effort while Sol remains usable.
+  - Smoke-test that an execution tab opens in Ubuntu at the exact CWD with the selected model/effort while Sol remains usable.
   - Verify review retrieves the correct report and handles completed, partial, blocked, and missing-report runs.
   - Validate the skill metadata, four agent TOMLs, global trigger, and narrow approval rule. Separately prove in a fresh session that explicit
     per-spawn role/model/effort fields are visible and honored before accepting delegation routing.
   - Default to plan-only handoff, a shared worktree without writer locks, latest unreviewed-run selection, and the lowest adequate Pareto-
-    ladder rung.
+    frontier choice.

@@ -40,18 +40,18 @@ routing works, and do not silently spawn on the inherited Sol model.
   - `reviewer`: correctness, security, regression, and test-gap review.
   - `verifier`: external documentation, API, and version verification.
 - Keep semantic roles separate from cost/capability by omitting model and effort fields from their TOMLs.
-- Encode only this automatic recommendation ladder:
+- Inherit this same horizon-aware automatic Pareto frontier, with seven choices across six capability tiers:
   - Luna low.
   - Luna medium.
   - Luna xhigh.
-  - Luna max.
+  - Luna max and Sol medium as peer choices at the upper tier.
   - Sol high.
   - Sol max.
-- Populate all manual alternatives from the current model catalog. Luna high, other Sol efforts, Sol ultra, and Terra remain manual-only and are
+- Populate all manual alternatives from the current model catalog. Luna high, Sol low/xhigh/ultra, and Terra remain manual-only and are
   never automatically recommended.
 - Add concise skill references for:
   - Role choice.
-  - Lowest-adequate-rung recommendation.
+  - Lowest-adequate-frontier-choice recommendation.
   - Batch manifest approval and row edits.
   - Explicit escalation after an insufficient result.
 - Before each proposed spawn batch, instruct the parent to show task, role, recommended model/effort, rationale, and bounded context strategy.
@@ -60,7 +60,9 @@ routing works, and do not silently spawn on the inherited Sol model.
   Codex does not permit model/effort overrides on full-history child forks.
 - Add repository templates for the four personal TOMLs and a compact managed block for global `~/.codex/AGENTS.md` that tells normal sessions
   to use this workflow before delegation. Phase 07 owns global installation.
-- If results are insufficient, recommend the next Pareto rung and request approval again; never escalate or respawn silently.
+- Sol high may be selected directly for inherently complex, architecture-sensitive, low-level/systems, or correctness-critical work; it is
+  not reserved only for insufficient Tier 4 results. If a Tier 4 peer result is insufficient, recommend Sol high and then Sol max, request
+  approval again, and never escalate or respawn silently. A horizon-driven switch between Luna max and Sol medium is rerouting, not escalation.
 
 ## Contracts
 
@@ -76,7 +78,7 @@ routing works, and do not silently spawn on the inherited Sol model.
 
 - Static validation of all four agent TOMLs.
 - Capability-gate schema visibility and effective child role/model/effort.
-- Model recommendations at every automatic rung plus catalog-derived manual-only choices.
+- Model recommendations at every automatic frontier choice plus catalog-derived manual-only choices.
 - Batch approval, row edit, rejection, and explicit escalation flows.
 - Fresh-context prompt completeness and rejection of a model override combined with a full-history fork.
 - Trigger prompts for investigation, exploration, review, documentation verification, ordinary coding, and unrelated tasks.
@@ -86,10 +88,9 @@ routing works, and do not silently spawn on the inherited Sol model.
 
 - A fresh-session probe proves explicit role/model/effort selection is visible and honored on the target Codex build.
 - Approved spawn calls contain the exact role, model, reasoning effort, and fresh-context strategy shown in the manifest.
-- A Sol ultra planning prompt follows the manifest workflow in representative forward-tests and does not silently inherit Sol for approved Luna
-  work.
+- A Sol ultra planning prompt follows the manifest workflow in representative forward-tests and does not silently inherit Sol for approved execution-agent work.
 - Manual-only models never appear as automatic recommendations.
-- Failed or insufficient work returns to the parent for a newly approved rung rather than escalating automatically.
+- Failed or insufficient work returns to the parent for a newly approved frontier choice rather than escalating automatically.
 - The skill and role validations pass with no role-by-model file multiplication.
 
 ## Explicitly Deferred

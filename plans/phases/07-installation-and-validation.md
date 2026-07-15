@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Deliver a simple, idempotent, reversible personal installation and demonstrate the complete Sol-to-Luna-to-Sol workflow in the target WSL2
+Deliver a simple, idempotent, reversible personal installation and demonstrate the complete Sol-to-execution-agent-to-Sol workflow in the target WSL2
 environment. Keep installation conservative: own dedicated paths, refuse conflicts, and avoid a general configuration-management system.
 
 ## Prerequisites
@@ -42,13 +42,13 @@ environment. Keep installation conservative: own dedicated paths, refuse conflic
 
 ## End-to-End Scenarios
 
-1. Sol max Plan mode produces an approved plan; Default-mode handoff launches a confirmed Luna plan-only run; Luna's report is recovered when
-   present; Sol independently reviews the live diff/tests.
+1. Sol max Plan mode produces an approved plan; Default-mode handoff launches a confirmed execution-agent plan-only run; the execution report is
+   recovered when present; Sol independently reviews the live diff/tests.
 2. A Sol fork handoff opens a distinct execution thread with retained planning context and explicit model/effort while the source remains usable.
-3. A dirty-repository warning is tied to the exact fingerprint; after confirmation, review distinguishes baseline changes from Luna changes.
-4. A missing/malformed Luna report falls back to the exact unstructured result and repository-only review.
-5. Sol launches a fresh linked Luna repair, reviews it, then exercises a Luna-context fork without opening the same session twice.
-6. Sol-fix requires confirmation that no Luna editing turn is active in the shared worktree.
+3. A dirty-repository warning is tied to the exact fingerprint; after confirmation, review distinguishes baseline changes from execution changes.
+4. A missing/malformed execution report falls back to the exact unstructured result and repository-only review.
+5. Sol launches a fresh linked execution repair, reviews it, then exercises an execution-context fork without opening the same session twice.
+6. Sol-fix requires confirmation that no execution editing turn is active in the shared worktree.
 7. When Phase 06 is enabled, Sol proposes a mixed subagent batch; the user edits one row; only the approved explicit fresh-context selections
    spawn.
 8. Windows Terminal is unavailable and Codex Flow prints a safe manual child command without losing the run plan.

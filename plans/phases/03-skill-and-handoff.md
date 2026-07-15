@@ -23,8 +23,8 @@ core model/context selection and confirmation experience, not subagent routing.
   - Refuse launch when the latest rollout turn says native Plan mode is active and explain the single Shift+Tab boundary.
   - If mode evidence is absent or unsupported, stop with an actionable message rather than relying on user prose.
   - In Default mode, show one combined menu for context and model/effort.
-  - Recommend the lowest adequate execution ladder rung with a one-line rationale.
-  - Populate manual alternatives from the current model catalog without adding them to the automatic ladder.
+  - Recommend the lowest adequate execution frontier choice with a one-line rationale.
+  - Populate manual alternatives from the current model catalog without adding them to the automatic frontier.
   - Show the dirty-status warning and exact plan preview/hash.
   - Call the absolute launcher path only after explicit confirmation.
 - State the host boundary plainly: the skill can launch another TUI but cannot change the model or mode of the currently running Sol TUI.
@@ -50,7 +50,7 @@ core model/context selection and confirmation experience, not subagent routing.
 - Official skill validation and generated metadata consistency.
 - Trigger prompts for explicit handoff, explanatory questions, ordinary coding, and unrelated tasks.
 - Plan-mode refusal, unknown-mode refusal, and Default-mode launch path.
-- Execution-model recommendations at every automatic rung plus catalog-derived manual choices.
+- Execution-model recommendations at every automatic frontier choice plus catalog-derived manual choices.
 - Combined confirmation approval, edit, rejection, stale fingerprint, and unsupported model flows.
 - Development link, repeat link, and removal without damaging unrelated user files.
 - One approved fresh-session forward test that discovers the skill and reaches the launcher confirmation without launching unexpectedly.
